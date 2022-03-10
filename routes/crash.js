@@ -4,10 +4,9 @@ const os = require('os');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.send({
-    hostname: os.hostname(),
-    version: process.env.npm_package_version,
-  });
+  setTimeout(() => {
+    throw new Error('something bad happened');
+  }, 0);
 });
 
 module.exports = router;
