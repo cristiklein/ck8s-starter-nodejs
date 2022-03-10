@@ -1,0 +1,109 @@
+name: Deploy to Compliant Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+      - demo-*
+
+env:
+  DOMAIN: ckdemo.a1ck.io
+  APP_DOMAIN: ${{ github.ref_name }}.ckdemo.a1ck.io
+  DOCKER_USER: 'robot$demo+ci-cd'
+  REGISTRY_PROJECT: demo
+  TAG: ${{ github.ref_name }}
+  HELM_RELEASE: ${{ github.ref_name }}
+
+jobs:
+  build-push-deploy:
+    name: Deploy application
+    runs-on: ubuntu-latest
+
+    environment:
+      name: development
+      url: https://${{ env.APP_DOMAIN }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup KUBECONFIG
+      env:
+        KUBECONFIG_CONTENTS: ${{ secrets.KUBECONFIG_CONTENTS }}
+      run: |-
+        mkdir -p ~/.kube
+        echo "$KUBECONFIG_CONTENTS" > ~/.kube/config
+        chmod 0400 ~/.kube/config
+
+    - name: Check installed tools
+      run: |-
+        docker version
+        kubectl version --client
+        helm version
+        curl --version
+
+    - name: Check KUBECONFIG
+      run: |-
+        kubectl get nodes
+        # You should see the Nodes of your Kubernetes cluster
+        echo "Namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
+
+    - name: Check health of environment
+      run: |-
+        curl --fail --verbose https://dex.$DOMAIN/healthz
+        curl --fail --verbose https://harbor.$DOMAIN/healthz
+        curl --fail --verbose https://grafana.$DOMAIN/healthz
+        curl --fail --verbose https://opensearch.$DOMAIN/api/status
+        curl --insecure --fail --verbose https://app.$DOMAIN/healthz  # WC Ingress Controller
+        # All commands above should return 'HTTP/2 200'
+
+    - name: Login to container registry
+      env:
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |-
+        echo $DOCKER_PASSWORD \
+          | docker login --username $DOCKER_USER --password-stdin harbor.$DOMAIN
+
+    - name: Build and push container image
+      run: |-
+        docker build -t harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:$TAG .
+        docker push harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:$TAG
+
+    - name: Deploy
+      run: |-
+        helm upgrade \
+            --install \
+            $HELM_RELEASE \
+            deploy/ck8s-user-demo/ \
+            --wait \
+            --set image.repository=harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo \
+            --set image.tag=$TAG \
+            --set image.pullPolicy=Always \
+            --set ingress.hostname=$APP_DOMAIN
+
+    - name: Verify Deployment
+      run: |-
+        kubectl get pods
+        kubectl get certificate
+
+    - name: Wait for HTTPS certificate
+      run: |-
+        kubectl wait --for=condition=Ready certificates/$APP_DOMAIN-tls
+
+    - name: Verify application
+      run: |-
+        curl --fail --verbose https://$APP_DOMAIN
+        # First line should be HTTP/2 200
+    
+  show-log-url:
+    name: View application logs
+    runs-on: ubuntu-latest
+
+    environment:
+      name: logging
+      url: https://opensearch.${{ env.DOMAIN }}/app/discover#/?_a=(filters:!((query:(match_phrase:(kubernetes.labels.app_kubernetes_io%2Finstance:${{ env.HELM_RELEASE }})))),index:'8189b060-2d66-11ea-8c64-79e207e2e1ca',interval:auto,query:(language:kuery,query:''),sort:!())
+
+    steps:
+      - name: View application logs
+        run: |-
+          echo "https://opensearch.${{ env.DOMAIN }}/app/discover#/?_a=(filters:!((query:(match_phrase:(kubernetes.labels.app_kubernetes_io%2Finstance:${{ env.HELM_RELEASE }})))),index:'8189b060-2d66-11ea-8c64-79e207e2e1ca',interval:auto,query:(language:kuery,query:''),sort:!())"
