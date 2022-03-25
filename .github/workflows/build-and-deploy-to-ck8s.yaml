@@ -44,8 +44,7 @@ jobs:
 
     - name: Check KUBECONFIG
       run: |-
-        kubectl get nodes
-        # You should see the Nodes of your Kubernetes cluster
+        kubectl get pods
         echo "Namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
 
     - name: Check health of environment
