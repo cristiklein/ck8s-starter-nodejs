@@ -12,6 +12,7 @@ env:
   DOCKER_USER: 'robot$demo+ci-cd'
   REGISTRY_PROJECT: demo
   HELM_RELEASE: ${{ github.ref_name }}
+  TAG: ${{ github.ref_name }}-${{ github.sha }}
 
 jobs:
   build-push-deploy:
@@ -61,10 +62,6 @@ jobs:
       run: |-
         echo $DOCKER_PASSWORD \
           | docker login --username $DOCKER_USER --password-stdin harbor.$DOMAIN
-    
-    - name: Set container image tag
-      run: |-
-        echo "TAG=${{ github.ref_name }}-$(git describe --tags --always)" >> $GITHUB_ENV
 
     - name: Build and push container image
       run: |-
