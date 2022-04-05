@@ -7,12 +7,12 @@ on:
       - demo-*
 
 env:
-  DOMAIN: ckdemo.a1ck.io
-  APP_DOMAIN: ${{ github.ref_name }}.ckdemo.a1ck.io
+  DOMAIN: CHANGE_ME
+  APP_DOMAIN: ${{ github.ref_name }}.CHANGE_ME
   DOCKER_USER: 'robot$demo+ci-cd'
   REGISTRY_PROJECT: demo
-  TAG: ${{ github.ref_name }}
   HELM_RELEASE: ${{ github.ref_name }}
+  TAG: ${{ github.ref_name }}-${{ github.sha }}
 
 jobs:
   build-push-deploy:
@@ -44,8 +44,7 @@ jobs:
 
     - name: Check KUBECONFIG
       run: |-
-        kubectl get nodes
-        # You should see the Nodes of your Kubernetes cluster
+        kubectl get pods
         echo "Namespace: $(kubectl config view --minify --output 'jsonpath={..namespace}')"
 
     - name: Check health of environment
@@ -66,8 +65,8 @@ jobs:
 
     - name: Build and push container image
       run: |-
-        docker build -t harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:$TAG .
-        docker push harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:$TAG
+        docker build -t harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:${{ env.TAG }} .
+        docker push harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo:${{ env.TAG }}
 
     - name: Deploy
       run: |-
@@ -77,7 +76,7 @@ jobs:
             deploy/ck8s-user-demo/ \
             --wait \
             --set image.repository=harbor.$DOMAIN/$REGISTRY_PROJECT/ck8s-user-demo \
-            --set image.tag=$TAG \
+            --set image.tag=${{ env.TAG }} \
             --set image.pullPolicy=Always \
             --set ingress.hostname=$APP_DOMAIN
 
