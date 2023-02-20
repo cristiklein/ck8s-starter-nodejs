@@ -51,7 +51,7 @@ jobs:
         curl --fail --verbose https://dex.$DOMAIN/healthz
         curl --fail --verbose https://harbor.$DOMAIN/healthz
         curl --fail --verbose https://grafana.$DOMAIN/healthz
-        curl --fail --verbose https://opensearch.$DOMAIN/api/status
+        curl --fail --verbose https://opensearch.$DOMAIN/
         curl --insecure --fail --verbose https://app.$DOMAIN/healthz  # WC Ingress Controller
         # All commands above should return 'HTTP/2 200'
 
