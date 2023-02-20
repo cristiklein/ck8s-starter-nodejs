@@ -4,12 +4,11 @@ on:
   push:
     branches:
       - main
-      - demo-*
 
 env:
-  DOMAIN: CHANGE_ME
-  APP_DOMAIN: ${{ github.ref_name }}.CHANGE_ME
-  DOCKER_USER: 'robot$demo+ci-cd'
+  DOMAIN: long-running.dev-ck8s.com
+  APP_DOMAIN: cklein.long-running.dev-ck8s.com
+  DOCKER_USER: 'robot$cklein-playground+cklein-playground'
   REGISTRY_PROJECT: demo
   HELM_RELEASE: ${{ github.ref_name }}
   TAG: ${{ github.ref_name }}-${{ github.sha }}
