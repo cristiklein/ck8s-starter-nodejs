@@ -10,7 +10,7 @@ env:
   APP_DOMAIN: cklein.long-running.dev-ck8s.com
   DOCKER_USER: 'robot$cklein-playground+cklein-playground'
   REGISTRY_PROJECT: cklein-playground
-  HELM_RELEASE: ${{ github.ref_name }}
+  HELM_RELEASE: myapp
   TAG: ${{ github.ref_name }}-${{ github.sha }}
 
 jobs:
